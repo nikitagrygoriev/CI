@@ -108,10 +108,10 @@ def train(test_size, err, ind, nb_clf = GaussianNB()):
   print('Sensitivity(TPR): ',sensitivity, ', Specificity(TNR): ',specificity, 
         ', Fall-out(FNR): ', fnr, ', Miss Rate(FPR): ', fpr,
         ', PPV: ', ppv, ', NPV: ',npv, ', Accuracy(ACC)',accuracy)
-  print('Confusion Matrix:\n',conf_matrix,'\n\n')
+  print('Confusion Matrix:\n',conf_matrix,'\n')
   
 
-for i in ([.5,.1,0],[.4,.1,1],[.3,.1,0],[.5,.2,0],[.4,.2,0],[.3,.2,0]):
+for i in ([.5,.1,0],[.5,.1,1],[.5,.1,2]):
   train(i[0],i[1],i[2])
 
 """# Zadanie 3
@@ -120,8 +120,23 @@ Powtórz zadanie 2, ale dla klasyfikatora SVM. Użyj kerneli `rbf` i `linear`. P
 """
 
 from sklearn.svm import SVC
-clf = SVC(gamma='auto', kernel='rbf')
-clf.fit(X, y)
+
+cs = [1.0, 10.0, 0.1]
+gammas = ['scale','auto',1.0,10.0,0.1]
+kernels = 'rbf','linear'
+for kernel in kernels:
+  for c in cs:
+    if kernel=='rbf':
+      for gamma in gammas:
+        clf = SVC(C=c, gamma=gamma, kernel=kernel)
+        print(f'Results for kernel={kernel} with c={c} gamma={gamma}\n')
+        for i in ([.5,.1,0],[.5,.1,1],[.5,.1,2]):
+          train(i[0],i[1],i[2]) 
+    else:
+      clf = SVC(kernel=kernel)
+      print(f'Results for kernel={kernel} with gamma={gamma}\n')
+      for i in ([.5,.1,0],[.5,.1,1],[.5,.1,2]):
+        train(i[0],i[1],i[2])
 
 """# Zadanie 4
 
@@ -136,6 +151,7 @@ from sklearn.model_selection import KFold
 from sklearn.svm import SVC
 
 def evaluate_classifier(C):
+  scores = []
   kf = KFold(n_splits=5)
   X = iris_reduced_data
   y = iris.target
@@ -144,12 +160,26 @@ def evaluate_classifier(C):
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
 
-    clf = SVC(gamma='auto', kernel='rbf', C=C)
+    clf = SVC(gamma=gamma, kernel=kernel, C=C)
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
-    print(metrics.accuracy_score(y_test, y_pred))
+    #print(round(metrics.accuracy_score(y_test, y_pred),2),end=' ')
+    scores.append(metrics.accuracy_score(y_test, y_pred)) 
+  return np.array(scores)
 
+resultsBestParams = np.array([[0,0,0,0,0]])
+for kernel in ['linear','rbf']:
+  for gamma in ['scale','auto',1.0,10.0,0.1]:
+    for C in [1.0, 3.0, 0.3]:
+      #print(f"\nkernel={kernel} gamma={gamma} C={C}")
+      resultsBestParams = np.concatenate((resultsBestParams, [evaluate_classifier(C)]), axis=0)
 
-for C in [1.0, 3.0, 0.3]:
-  print(f"C = {C}")
-  evaluate_classifier(C)
+result = []
+resultsBestParams = np.delete(resultsBestParams, 0, 0)
+for i in [0,1,2,3,4]:
+  result.append([np.argmax(resultsBestParams[:,i]), np.amax(resultsBestParams[:,i])])
+  print('Split',i+1,'\tIndex: ',np.argmax(resultsBestParams[:,i]), '\t Value: ',np.amax(resultsBestParams[:,i]))
+
+#print(result)
+
+#print(resultsBestParams)
